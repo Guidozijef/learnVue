@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Route</title>
+  </head>
+  <body>
+    <a href="#foo">foo</a>
+    <a href="#bar">bar</a>
+    <button id="btn1">Change Normal State</button>
+    <button id="btn2">Change Hash State</button>
+    <div id="foo" style="border: 1px solid red; height: 800px">foo</div>
+    <div id="bar" style="border: 1px solid blue; height: 800px">bar</div>
+    <script>
+      window.addEventListener("hashchange", e => {
+        console.log("hash改变了");
+      });
+      window.addEventListener("popstate", e => {
+        console.log("popstate被触发了");
+      });
+      document.getElementById("btn1").addEventListener("click", e => {
+        history.pushState("test", "test", "test");
+      });
+      document.getElementById("btn2").addEventListener("click", e => {
+        history.pushState("test", "test", "#test");
+      });
+    </script>
+  </body>
+</html>
