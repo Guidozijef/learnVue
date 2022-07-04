@@ -24,7 +24,7 @@ export function def (obj, key, val, enumerable) {
 }
 
 /**
- * Parse simple path.
+ * Parse simple path. 这个函数是用来解析读取字符串拼接路径类的数据，例如a:{b:{c: 10}},参数就是'a.b.c'
  */
 const bailRE = /[^\w.$]/
 export function parsePath (path: string): any {

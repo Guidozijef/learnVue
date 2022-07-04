@@ -9,7 +9,9 @@ import {
 } from '../util/index'
 
 import { observerState, observe } from '../observer'
-import { proxy } from '../../../vue-src/core/instance/state'
+import { defineComputed, proxy } from '../../../vue-src/core/instance/state'
+import Watcher from '../observer/watcher'
+import Dep from '../observer/dep'
 
 export function initState (vm) {
   vm._watchers = [] // _watchers存放订阅者实例
@@ -25,9 +27,14 @@ export function initState (vm) {
   if (opts.data) {
     initData(vm)
   } else {
-
-
+    // 该组件没有data的时候绑定一个空对象
+    observe(vm._data = {}, true /* asRootData */)
   }
+
+  // 初始化computed
+  if (opts.computed) initComputed(vm, opts.computed)
+  // 初始化watchers
+  if (opts.watch) initWatch(vm, opts.watch)
 
 
 }
@@ -161,4 +168,152 @@ function initMethods (vm, methods) {
     vm[key] = typeof methods[key] !== 'function' ? noop : bind(methods[key], vm)
 
   }
+}
+
+const computedWatcherOptions = { lazy: true }
+
+// 初始化computed
+function initComputed (vm, computed) {
+  const watchers = vm._computedWatchers = Object.create(null)
+
+  // 循环computed属性，为每一个computed创建一个watcher实例进行依赖收集
+  for (const key in computed) {
+    const userDef = computed[key]
+
+     /*
+      计算属性可能是一个function，也有可能设置了get以及set的对象。
+      可以参考 https://cn.vuejs.org/v2/guide/computed.html#计算-setter
+    */
+    
+    let getter = typeof userDef === 'function' ? userDef : userDef.get
+    // 如果没有get函数赋值一个空函数
+    if (getter === undefined) {
+      console.log(`No getter function has been defined for computed property "${key}".`)
+      getter = noop
+    }
+    // create internal watcher for the computed property.
+    /*
+      为计算属性创建一个内部的监视器Watcher，保存在vm实例的_computedWatchers中
+      这里的computedWatcherOptions参数传递了一个lazy为true，会使得watch实例的dirty为true
+    */
+   
+    watchers[key] = new Watcher(vm, getter, noop, computedWatcherOptions)
+
+    // component-defined computed properties are already defined on the
+    // component prototype. We only need to define computed properties defined
+    // at instantiation here.
+    /*组件正在定义的计算属性已经定义在现有组件的原型上则不会进行重复定义*/
+
+    if (!(key in vm)) {
+      // 定义计算属性
+      defineComputed(vm, key, userDef)
+    } else if (process.env.NODE_ENV !== 'production') {
+      /*如果计算属性与已定义的data或者props中的名称冲突则发出warning*/
+      if (key in vm.$data) {
+        console.log(`The computed property "${key}" is already defined in data.`, vm)
+      } else if (vm.$options.props && key in vm.$options.props) {
+        console.log(`The computed property "${key}" is already defined as a prop.`, vm)
+      }
+    }
+
+  }
+}
+
+
+
+// 定义计算属性
+
+export function defineComputed (target, key, userDef) {
+  if (typeof userDef === 'function') {
+    // 创建计算属性的getter
+    sharedPropertyDefinition.get = createComputedGetter(key)
+
+    /*
+      当userDef是一个function的时候是不需要setter的，所以这边给它设置成了空函数。
+      因为计算属性默认是一个function，只设置getter。
+      当需要设置setter的时候，会将计算属性设置成一个对象。参考：https://cn.vuejs.org/v2/guide/computed.html#计算-setter
+    */
+    sharedPropertyDefinition.set = noop
+
+  } else {
+
+    /*get不存在则直接给空函数，如果存在则查看是否有缓存cache，没有依旧赋值get，有的话使用createComputedGetter创建*/
+    sharedPropertyDefinition.get = userDef.get ? (userDef.catch !== false ? createComputedGetter(key) : userDef.get) : noop
+
+    /*如果有设置set方法则直接使用，否则赋值空函数*/
+    sharedPropertyDefinition.set = userDef.set ? userDef.set : noop
+
+  }
+
+  /*defineProperty上getter与setter，因为计算属性不在data里，也就没有在实例上， 所以需要把当前自定义的计算属性代理到vm实例上 */
+  Object.defineProperty(target, key, sharedPropertyDefinition)
+}
+
+
+// 创建一个计算属性的getter
+function createComputedGetter (key) {
+  return function computedGetter () {
+    // 取出当前属性的监听者watcher
+    const watcher = this._computedWatchers && this._computedWatchers[key]
+
+    if (watcher) {
+       /*实际是脏检查，在计算属性中的依赖发生改变的时候dirty会变成true，在get的时候重新计算计算属性的输出最新的值*/
+      if (watcher.dirty) {
+        watcher.evaluate()
+      }
+      // 依赖收集
+      if (Dep.target) {
+        watcher.depend()
+      }
+
+      return watcher.value
+
+    }
+  }
+}
+
+
+/*初始化watchers*/
+function initWatch (vm, watch) {
+  for (const key in watch) {
+    const handler = watch[key]
+    // 数组则遍历进行createWatcher
+    if (Array.isArray(handler)) {
+      for (let i = 0; i < handler.length; i++) {
+        createWatcher(vm, key, handler[i])
+      }
+    } else {
+      createWatcher(vm, key, handler)
+    }
+  }
+}
+
+/*创建一个观察者Watcher*/
+function createWatcher (vm, key, handler) {
+  let options
+  /*对对象类型进行严格检查，只有当对象是纯javascript对象的时候返回true*/
+  if (isPlainObject(handler)) {
+    /*
+      这里是当watch的写法是这样的时候
+      watch: {
+          test: {
+              handler: function () {},
+              deep: true
+          }
+      }
+    */
+    options = handler
+    handler = handler.handler
+
+  }
+  if (typeof handler === 'string') {
+    /*
+        当然，也可以直接使用vm中methods的方法
+    */
+   handler = vm[handler]
+  }
+  /*用$watch方法创建一个watch来观察该对象的变化*/
+  vm.$watch(key, handler, options)
+
+
 }
