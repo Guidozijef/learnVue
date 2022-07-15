@@ -1,10 +1,9 @@
-import { callHook } from "../../../vue-src/core/instance/lifecycle"
-import { createEmptyVNode } from "../../../vue-src/core/vdom/vnode"
+import { createEmptyVNode } from "../vdom/vnode"
 import Watcher from "../observer/watcher"
 
 /*初始化生命周期*/
 export function initLifecycle (vm) {
-  const options = cm.$options
+  const options = vm.$options
 
  // locate first non-abstract parent
   /* 将vm对象存储到parent组件中（保证parent组件是非抽象组件，比如keep-alive） */
@@ -46,6 +45,7 @@ export function mountComponent (vm, el, hydrating) {
   /*updateComponent作为Watcher对象的getter函数，用来依赖收集*/
   let updateComponent
    /* istanbul ignore if */
+   // FIXME: vm._render函数用来生成虚拟dom，_update函数用来进行patch和更新视图，_render函数在初始化initRender中绑定
    updateComponent = () => {
     vm._update(vm._render(), hydrating)
    }

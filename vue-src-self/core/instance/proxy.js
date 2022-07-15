@@ -8,7 +8,7 @@ export function initProxy (vm) {
       }
     })
   } else {
-    vm._rednerProxy = vm
+    vm._renderProxy = vm
   }
   
 }

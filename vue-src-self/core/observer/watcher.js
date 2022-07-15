@@ -1,5 +1,5 @@
 import { pushTarget, popTarget } from "./dep";
-import { parsePath } from "../util";
+import { parsePath, remove, isObject } from "../util";
 import { queueWatcher } from "./scheduler";
 
 
@@ -201,6 +201,25 @@ export default class Watcher {
     let i = this.deps.length
     while (i--) {
       this.deps[i].depend()
+    }
+  }
+
+
+
+  // 将自身从所有依赖收集订阅列表删除
+  teardown () {
+    if (this.active) {
+      /*从vm实例的观察者列表中将自身移除，由于该操作比较耗费资源，所以如果vm实例正在被销毁则跳过该步骤。*/
+      if (!this.vm._isBeingDestroyed) {
+        remove(this.vm._watchers, this)
+      }
+
+      let i = this.deps.length
+      while (i--) {
+        this.deps[i].removeSub(this)
+      }
+
+      this.active = false
     }
   }
 }

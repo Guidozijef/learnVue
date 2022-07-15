@@ -6,7 +6,7 @@
  */
 
 import Dep from "./dep";
-import { def, defineReactive, hasProto, hasChanged } from "../util";
+import { def, hasProto, hasChanged } from "../util";
 
 /*默认情况下，当一个无效的属性被设置时，新的值也会被转换成无效的。不管怎样当传递props时，我们不需要进行强制转换*/
 export const observerState = {
@@ -70,6 +70,8 @@ export class Observer {
     // 判断是对象还是数组分别进行代理
     if (Array.isArray(value)) {
       const augment = hasProto ? ProtoAugment : copyAugment;
+
+      
     } else {
       // 如果是对象则直接walk进行绑定
       this.walk(value);
@@ -157,3 +159,68 @@ export function defineReactive (obj, key, val, customSetter) {
   })
 
 }
+
+
+// TODO: 这个方法就是$set方法
+export function set(target, key, val) {
+  // 如果传入数组则在指定位置插入val
+  if (Array.isArray(target) && typeof key === 'number') {
+    target.length = Math.max(target.length, key)
+    /*因为数组不需要进行响应式处理，数组会修改七个Array原型上的方法来进行响应式处理*/
+    target.splice(key, 1, val) // 这个splice方法就是重写的方法，所以不需要进行相应式处理了
+    return val
+  }
+
+  // 如果是一个对象， 并且已经存在了这个key则直接返回
+  if (hasOwn(target, key)) {
+    target[key] = val
+    return val
+  }
+
+  // 获得target的Oberver实例
+  const ob = target.__ob__
+
+  if (target._isVue || (ob && ob.vmCount)) {
+    console.error('Avoid adding reactive properties to a Vue instance or its root $data ' +
+    'at runtime - declare it upfront in the data option.')
+    return val
+  }
+
+  if (!ob) {
+    target[key] = val
+    return val
+  }
+
+  // 为对象defineProperty上在变化时通知的属性，这里的ob.value 就是指的target
+  defineReactive(ob.value, key, val)
+  ob.dep.notify()
+  return val
+}
+
+
+// 这个是$del方法
+export function del (target, key) {
+  if (Array.isArray(target) && typeof key === 'number') {
+    target.splice(key, 1)
+    return 
+  }
+
+  const ob = target.__ob__
+  if (target._isVue || (ob && ob.vmCount)) {
+    console.error('Avoid deleting properties on a Vue instance or its root $data ' +
+    '- just set it to null.')
+    return 
+  }
+
+  if (!hasOwn(target, key)) {
+    return 
+  }
+
+  delete target[key]
+
+  if (!ob) return 
+  ob.dep.notify()
+}
+
+
+

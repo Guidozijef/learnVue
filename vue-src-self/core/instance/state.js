@@ -12,6 +12,7 @@ import { observerState, observe } from '../observer'
 import { defineComputed, proxy } from '../../../vue-src/core/instance/state'
 import Watcher from '../observer/watcher'
 import Dep from '../observer/dep'
+import { set, del } from '../observer'
 
 export function initState (vm) {
   vm._watchers = [] // _watchers存放订阅者实例
@@ -222,7 +223,6 @@ function initComputed (vm, computed) {
 
 
 // 定义计算属性
-
 export function defineComputed (target, key, userDef) {
   if (typeof userDef === 'function') {
     // 创建计算属性的getter
@@ -315,5 +315,56 @@ function createWatcher (vm, key, handler) {
   /*用$watch方法创建一个watch来观察该对象的变化*/
   vm.$watch(key, handler, options)
 
+}
 
+
+
+export function stateMixin (Vue) {
+  const dataDef = {}
+  dataDef.get = function () { return this._data }
+  const propsDef = {}
+  propsDef.get = function () { return this._props }
+
+  Object.defineProperty(Vue.prototype, '$data', dataDef)
+  Object.defineProperty(Vue.prototype, '$props', propsDef)
+
+
+  /*
+    TODO:https://cn.vuejs.org/v2/api/#vm-set
+    用以将data之外的对象绑定成响应式的
+  */
+  Vue.prototype.$set = set
+
+    /*
+    TODO:https://cn.vuejs.org/v2/api/#vm-delete
+    与set对立，解除绑定
+  */
+  Vue.prototype.$delete = del
+
+
+  Vue.prototype.$watch = function (expOrFn, cb, options) {
+    const vm = this
+    options = options || {}
+    options.user = true
+    const watcher = new Watcher(vm, expOrFn, cb, options)
+    // 如果有immediate参数的时候会立即执行
+    if (options.immediate) {
+      cb.call(vm, watcher.value)
+    }
+
+    // 返回一个取消观察函数，用来停止触发回调
+    return function unwatchFn () {
+      // 将自身从所有依赖收集订阅列表删除
+      watcher.teardown()
+    }
+  }
+
+
+
+
+
+
+
+
+  
 }
