@@ -11,7 +11,7 @@ function broadcast(componentName, eventName, params) {
 
     if (name === componentName) {
       /*如果是我们需要广播到的子组件的时候调用$emit触发所需事件，在子组件中用$on监听*/
-      child.$emit.apply(child, [eventName].concat(params));
+      child.$on.apply(child, [eventName].concat(params));
     } else {
       /*非所需子组件则递归遍历深层次子组件*/
       broadcast.apply(child, [componentName, eventName].concat([params]));

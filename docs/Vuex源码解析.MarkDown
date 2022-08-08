@@ -649,7 +649,7 @@ export default function devtoolPlugin (store) {
 }
 ```
 
-如果已经安装了该插件，则会在windows对象上暴露一个__VUE_DEVTOOLS_GLOBAL_HOOK__。devtoolHook用在初始化的时候会触发“vuex:init”事件通知插件，然后通过on方法监听“vuex:travel-to-state”事件来重置state。最后通过Store的subscribe方法来添加一个订阅者，在触发commit方法修改mutation数据以后，该订阅者会被通知，从而触发“vuex:mutation”事件。
+如果已经安装了该插件，则会在windows对象上暴露一个__VUE_DEVTOOLS_GLOBAL_HOOK__.devtoolHook用在初始化的时候会触发“vuex:init”事件通知插件，然后通过on方法监听“vuex:travel-to-state”事件来重置state。最后通过Store的subscribe方法来添加一个订阅者，在触发commit方法修改mutation数据以后，该订阅者会被通知，从而触发“vuex:mutation”事件。
 
 ## 最后
 
