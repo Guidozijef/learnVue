@@ -1,0 +1,28 @@
+<template>
+    <div>
+        <div>{{ count + 1 }}</div>
+        <div>{{ count + 2 }}</div>
+        <button @click="addCount(1)">+</button>
+        <button @click="addCount(2)">-</button>
+        <button @click="add100">+100</button>
+    </div>
+</template>
+
+<script>
+export default {
+    data() {
+        return {
+            count: 1
+        }
+    },
+    methods: {
+        addCount (num) {
+            this.count += num
+        },
+        add100 () {
+            this.count += 100
+        }
+    }
+}
+
+</script>
