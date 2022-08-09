@@ -9,31 +9,34 @@ export default {
 
 export function createApp(options) {
     let vm = {  $options: options }
+
+    let data = typeof options.data === 'function' ? options.data() : options.data
+    vm.$data = data
+    for (const key in data) {
+        if (Object.hasOwnProperty.call(data, key)) {
+            Object.defineProperty(vm, key, {
+                get () {
+                    return data[key]
+                },
+                set (newVal) {
+                    vm.$data[key] = newVal
+                    updated(vm, key, newVal)
+                }
+            })
+        }
+    }
+
+
     vm.mount = mount
     return vm
 }
 
 
 function mount (el) {
-    const { $options: { data, template, methods } } = this // 此处的this就是createApp返回的vm
+    const { $options: { template, methods }, $data } = this // 此处的this就是createApp返回的vm
     let $el = document.querySelector(el)
     $el.innerHTML = template
-    let $data = typeof data === 'function' ? data() : data
-    this.$data = $data
-    for (const key in $data) {
-        if (Object.hasOwnProperty.call($data, key)) {
-            Object.defineProperty(this, key, {
-                get () {
-                    return $data[key]
-                },
-                set (newVal) {
-                    $data[key] = newVal
-                    this.$data[key] = newVal
-                    updated(this, key, newVal)
-                }
-            })
-        }
-    }
+    
 
     let nodes = $el.children[0].querySelectorAll('*')  // 获取所有的真实节点DOM
     this.$node = nodes
@@ -65,12 +68,6 @@ function mount (el) {
         }
     }
 
-
-
-
-
-
     console.log(this)
-    
 
 }

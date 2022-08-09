@@ -3,9 +3,9 @@ const HtmlWebpackPlugin = require('html-webpack-plugin')
 
 module.exports = {
     mode: 'development',
-    entry: './src/main.js',
+    entry: path.resolve(__dirname, 'src/main.js'),
     output: {
-        path: path.resolve(__dirname, './dist'),
+        path: path.resolve(__dirname, 'dist'),
         filename: 'main.js'
     },
     module: {
@@ -17,12 +17,12 @@ module.exports = {
         ]
     },
     resolveLoader: {
-        modules: [path.resolve(__dirname, './modules'), 'node_modules'],
+        modules: [path.resolve(__dirname, 'modules'), 'node_modules'],
         extensions: ['.vue', '.js']
     },
     resolve: {
         extensions: ['.vue', '.js'],
-        modules: [path.resolve(__dirname, './modules'), 'node_modules']
+        modules: [path.resolve(__dirname, 'modules'), 'node_modules']
     },
     plugins: [
         new HtmlWebpackPlugin({
