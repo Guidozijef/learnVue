@@ -12,7 +12,7 @@ class MyPromise {
         this.value = null
         this.reason = null
 
-        let resole = (value) => {
+        let  resolve = (value) => {
             this.status = FULFILLED
             this.value = value
             this.onFulfilledCallbackList.forEach(fn => fn())
@@ -23,7 +23,7 @@ class MyPromise {
             this.onRejectedCallbackList.forEach(fn => fn())
         }
         try {
-            exception(resole, reject)
+            exception( resolve, reject)
         } catch (e) {
             reject(e)
         }
@@ -31,7 +31,7 @@ class MyPromise {
 
     then (onFulfilled, onRejected) {
 
-        let promise2 = new MyPromise((resole, reject) => {
+        let promise2 = new MyPromise(( resolve, reject) => {
                 
             if (this.status === PENDING) {
                 this.onFulfilledCallbackList.push(() => onFulfilled(this.value))
@@ -41,18 +41,67 @@ class MyPromise {
             setTimeout(() => {
                 if (this.status === FULFILLED) {
                     let x = onFulfilled(this.value)
-                    resolvePromise(promise2, x, resole, reject)
+                    resolvePromise(promise2, x,  resolve, reject)
                 }
                 
                 if (this.status === REJECTED) {
                     let x = onRejected(this.reason)
-                    resolvePromise(promise2, x, resole, reject)
+                    resolvePromise(promise2, x,  resolve, reject)
                 }
             }, 0)
         })
 
-        function resolvePromise(promise, x, resole, reject) {
-            console.log(promise, x, resole, reject)
+        function resolvePromise(promise, x,  resolve, reject) {
+            if (promise === x) {
+                return reject(new TypeError('max call stack exceeded'))
+            }
+            if (x instanceof MyPromise) {
+                x.then(
+                    (y) => {
+                        this.resolvePromise(promise, y, resolve, reject)
+                    },
+                    reject
+                )
+            } else if (
+                // Object.prototype.toString.call(x) === '[object, Object]'
+                typeof x === 'object' && x !== null || typeof x === 'function' 
+            ) {
+                let then = null
+                try {
+                    then = x.then
+                } catch (error) {
+                    return reject(error)
+                }
+    
+                if (typeof then === 'function') {
+                    // onFulflled, onRejected只能调用一次
+                    let called = false
+                    try {
+                        x.then.call(
+                            x,
+                            (y) => {
+                                if (called) return
+                                called = true
+                                this.resolvePromise(promise, y, resolve, reject)
+                            },
+                            (r) => {
+                                if (called) return
+                                called = true
+                                reject(r)
+                            }
+                        )
+                    } catch (error) {
+                        if (called) {
+                            return
+                        }
+                        reject(error)
+                    }
+                } else {
+                    resolve(x)
+                }
+            } else {
+                resolve(x)
+            }
         }
         return promise2 
     }
